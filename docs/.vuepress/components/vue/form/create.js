@@ -3,7 +3,6 @@ import Vue from 'vue'
 // Component是组件的配置对象
 export function create(Component, props) {
     // 借用vue构造函数生成实例
-    console.log('creat');
     const vm = new Vue({
         render(h) {
             // h是createElement别名，可以返回一个虚拟dom，VNode

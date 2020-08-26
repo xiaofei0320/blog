@@ -22,13 +22,5 @@
         "doc": "docs"
     },
     "devDependencies": {},
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/wangxiaofei960320/blog.git"
-    },
-    "bugs": {
-        "url": "https://github.com/wangxiaofei960320/blog/issues"
-    },
-    "homepage": "https://github.com/wangxiaofei960320/blog#readme",
     "description": ""
 }

@@ -42,6 +42,11 @@ module.exports = [
                 collapsable: false,
             },
             {
+                title: 'Vue-router源码解析',
+                path: '/guide/vue/routerSource',
+                collapsable: false,
+            },
+            {
                 title: '手写简易Vue',
                 path: '/guide/vue/vue',
                 collapsable: false,
@@ -143,13 +148,18 @@ module.exports = [
                 collapsable: false,
             },
             {
+                title: '分治',
+                path: '/guide/algorithm/divide',
+                collapsable: false,
+            },
+            {
                 title: '深度优先和广度优先',
                 path: '/guide/algorithm/depth',
                 collapsable: false,
             },
             {
-                title: '有效的括号',
-                path: '/guide/algorithm/valid-parentheses',
+                title: '动态规划',
+                path: '/guide/algorithm/dynamic',
                 collapsable: false,
             },
             {
@@ -180,13 +190,18 @@ module.exports = [
         ]
     },
     {
-        title: 'Webpack',
+        title: 'Webpack模块',
         collapsable: false,
         path: '/guide/webpack/webpack',
         children: [
             {
-                title: 'Webpack配置',
+                title: 'Webpack学习',
                 path: '/guide/webpack/webpack',
+                collapsable: false,
+            },
+            {
+                title: 'Rollup与Parcel',
+                path: '/guide/webpack/Rollup',
                 collapsable: false,
             },
             {

@@ -2,30 +2,44 @@
 ### 两数之和
 :::
 
-::: slot code-method2
+::: slot code-dfs
 ```js
-let twoSum = function(nums, target) {
-  let temp = []
-  for (let i = 0; i < nums.length; i++) {
-    let dif = target-nums[i]
-    if (temp[dif] !== undefined) {
-      return [temp[dif], i]
-    }
-    temp[nums[i]] = i;
-  }
+var levelOrder = function(root) {
+    if(!root) return []
+    let res = []
+    dfs(root, 0, res)
+    return res
 };
+
+function dfs(root, step, res){
+  if(root){
+    if(!res[step]) res[step] = []
+    res[step].push(root.val)
+    dfs(root.left, step + 1, res)
+    dfs(root.right, step + 1, res)
+  }
+}
 ```
 :::
-::: slot code-method1
+::: slot code-bfs
 ```js
-let twoSum = function(nums, target) {
-    for(let i = 0; i < nums.length; i++){
-        for(let j = 0; j < nums.length; j++){
-            if(i != j && nums[i] + nums[j] == target){
-                return [i, j];
-            }
-        }
+var levelOrder = function(root) {
+    if(!root) return []
+    let queue = [root]
+    let res = []
+    while(queue.length > 0){
+      let len = queue.length
+      let arr = []
+      while(len){
+        let node = queue.shift()
+        arr.push(node.val)
+        if(node.left) queue.push(node.left)
+        if(node.right) queue.push(node.right)
+        len--
+      }
+      res.push(arr)
     }
+    return res
 };
 ```
 :::

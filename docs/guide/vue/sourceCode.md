@@ -1,3 +1,7 @@
+::: slot title-list
+## 目录文件
+:::
+
 ::: slot header1
 ## 搭建环境调试
 :::
@@ -6,8 +10,16 @@
 ## 入口文件
 :::
 
+::: slot header10
+## 全局Api
+:::
+
 ::: slot header3
 ## 初始化流程
+:::
+
+::: slot header11
+## 数据响应式
 :::
 
 ::: slot header4
@@ -33,6 +45,45 @@
 
 ::: slot header9
 ## 组件化
+:::
+
+::: slot code-list
+```js
+.circleci // 持续集成
+benchmarks // 性能评测
+dist //输出目录
+examples //案例
+flow //flow声明文件
+packages //vue中的包
+scripts //工程化
+src //源码目录
+test //测试相关
+types //ts声明文件
+├─compiler       // 编译的相关逻辑
+│  ├─codegen
+│  ├─directives
+│  └─parser
+├─core           // vue核心代码
+│  ├─components  // vue中的内置组件 keep-alive
+│  ├─global-api  // vue中的全局api
+│  ├─instance    // vue中的核心逻辑
+│  ├─observer    // vue中的响应式原理
+│  ├─util        
+│  └─vdom        // vue中的虚拟dom模块
+├─platforms      // 平台代码
+│  ├─web	     // web逻辑 - vue
+│  │  ├─compiler
+│  │  ├─runtime
+│  │  ├─server
+│  │  └─util
+│  └─weex        // weex逻辑 - app
+│      ├─compiler
+│      ├─runtime
+│      └─util
+├─server         // 服务端渲染模块
+├─sfc            // 用于编译.vue文件
+└─shared         // 共享的方法和常量
+```
 :::
 
 ::: slot code1
@@ -93,8 +144,351 @@ module.exports = {
 ```
 :::
 
+::: slot code-mount
+```js
+import Vue from './runtime/index' //    1.引入运行时代码
+const mount = Vue.prototype.$mount; //  2.获取runtime中的$mount方法
+Vue.prototype.$mount = function (el,hydrating) { // 3. 重写$mount方法
+  el = el && query(el)
+  const options = this.$options
+  if (!options.render) { // 4.没有render方法就进行编译操作
+    let template = options.template
+    if(template){ // 5.将模板编译成函数
+        const { render, staticRenderFns } = compileToFunctions(template, {
+            outputSourceRange: process.env.NODE_ENV !== 'production',
+            shouldDecodeNewlines,
+            shouldDecodeNewlinesForHref,
+            delimiters: options.delimiters,
+            comments: options.comments
+        }, this)
+        options.render = render // 6.将render函数放到options中
+    }
+    // todo...
+  }
+  return mount.call(this, el, hydrating) // 7.进行挂载操作
+}
+export default Vue
+```
+:::
 
-::: slot code5
+::: slot code-util
+```js
+// exposed util methods.
+// NOTE: these are not considered part of the public API - avoid relying on
+// them unless you are aware of the risk.
+Vue.util = {
+    warn,
+    extend,
+    mergeOptions,
+    defineReactive
+}
+```
+:::
+
+::: slot code-set
+```js
+export function set (target: Array<any> | Object, key: any, val: any): any {
+  // 1.是开发环境 target 没定义或者是基础类型则报错
+  if (process.env.NODE_ENV !== 'production' &&
+    (isUndef(target) || isPrimitive(target))
+  ) {
+    warn(`Cannot set reactive property on undefined, null, or primitive value: ${(target: any)}`)
+  }
+  // 2.如果是数组 Vue.set(array,1,100); 调用我们重写的splice方法 (这样可以更新视图)
+  if (Array.isArray(target) && isValidArrayIndex(key)) {
+    target.length = Math.max(target.length, key)
+    target.splice(key, 1, val)
+    return val
+  }
+  // 3.如果是对象本身的属性，则直接添加即可
+  if (key in target && !(key in Object.prototype)) {
+    target[key] = val
+    return val
+  }
+  const ob = (target: any).__ob__
+  // 4.如果是Vue实例 或 根数据data时 报错
+  if (target._isVue || (ob && ob.vmCount)) {
+    process.env.NODE_ENV !== 'production' && warn(
+      'Avoid adding reactive properties to a Vue instance or its root $data ' +
+      'at runtime - declare it upfront in the data option.'
+    )
+    return val
+  }
+  // 5.如果不是响应式的也不需要将其定义成响应式属性
+  if (!ob) {
+    target[key] = val
+    return val
+  }
+  // 6.将属性定义成响应式的
+  defineReactive(ob.value, key, val)
+  ob.dep.notify() // 7.通知视图更新
+  return val
+}
+```
+:::
+
+::: slot code-del
+```js
+export function del (target: Array<any> | Object, key: any) {
+  if (process.env.NODE_ENV !== 'production' &&
+    (isUndef(target) || isPrimitive(target))
+  ) {
+    warn(`Cannot delete reactive property on undefined, null, or primitive value: ${(target: any)}`)
+  }
+  // 1.如果是数组依旧调用splice方法
+  if (Array.isArray(target) && isValidArrayIndex(key)) {
+    target.splice(key, 1)
+    return
+  }
+  const ob = (target: any).__ob__
+  if (target._isVue || (ob && ob.vmCount)) {
+    process.env.NODE_ENV !== 'production' && warn(
+      'Avoid deleting properties on a Vue instance or its root $data ' +
+      '- just set it to null.'
+    )
+    return
+  }
+  // 2.如果本身就没有这个属性什么都不做
+  if (!hasOwn(target, key)) {
+    return
+  }
+  // 3.删除这个属性
+  delete target[key]
+  if (!ob) {
+    return
+  }
+  // 4.通知更新
+  ob.dep.notify()
+}
+```
+:::
+
+::: slot code-nextTick
+```js
+const callbacks = []; // 存放nextTick回调
+let pending = false; 
+function flushCallbacks () { // 清空队列
+  pending = false
+  const copies = callbacks.slice(0)
+  callbacks.length = 0
+  for (let i = 0; i < copies.length; i++) {
+    copies[i]()
+  }
+}
+let timerFunc
+export function nextTick (cb?: Function, ctx?: Object) {
+  let _resolve
+  callbacks.push(() => {
+    if (cb) {
+      try {
+        cb.call(ctx) // 1.将回调函数存入到callbacks中
+      } catch (e) {
+        handleError(e, ctx, 'nextTick')
+      }
+    } else if (_resolve) {
+      _resolve(ctx)
+    }
+  })
+  if (!pending) {
+    pending = true
+    timerFunc();     // 2.异步刷新队列
+  }
+  // 3.支持promise写法
+  if (!cb && typeof Promise !== 'undefined') {
+    return new Promise(resolve => { 
+      _resolve = resolve
+    })
+  }
+}
+```
+:::
+
+::: slot code-timerFunc
+```js
+// 1.默认先使用Promise 因为mutationObserver有bug可能不工作
+if (typeof Promise !== 'undefined' && isNative(Promise)) {
+  const p = Promise.resolve()
+  timerFunc = () => {
+    p.then(flushCallbacks)
+    // 解决队列不刷新问题
+    if (isIOS) setTimeout(noop)
+  }
+  isUsingMicroTask = true
+// 2.使用MutationObserver
+} else if (!isIE && typeof MutationObserver !== 'undefined' && (
+  isNative(MutationObserver) ||
+  
+  MutationObserver.toString() === '[object MutationObserverConstructor]'
+)) {
+  let counter = 1
+  const observer = new MutationObserver(flushCallbacks)
+  const textNode = document.createTextNode(String(counter))
+  observer.observe(textNode, {
+    characterData: true
+  })
+  timerFunc = () => {
+    counter = (counter + 1) % 2
+    textNode.data = String(counter)
+  }
+  isUsingMicroTask = true
+// 3.使用 setImmediate
+} else if (typeof setImmediate !== 'undefined' && isNative(setImmediate)) {
+  timerFunc = () => {
+    setImmediate(flushCallbacks)
+  }
+// 4.使用setTimeout
+} else {
+  timerFunc = () => {
+    setTimeout(flushCallbacks, 0)
+  }
+}
+```
+:::
+
+::: slot code-observable
+```js
+Vue.observable = <T>(obj: T): T => {
+    observe(obj)
+    return obj
+}
+```
+:::
+
+::: slot code-options
+```js
+ASSET_TYPES.forEach(type => {
+    Vue.options[type + 's'] = Object.create(null)
+})
+Vue.options._base = Vue
+extend(Vue.options.components, builtInComponents) // 内置了 keep-alive
+```
+:::
+
+::: slot code-use
+```js
+initUse(Vue)
+
+Vue.use = function (plugin: Function | Object) {
+    const installedPlugins = (this._installedPlugins || (this._installedPlugins = []))
+    // 1.如果安装过这个插件直接跳出
+    if (installedPlugins.indexOf(plugin) > -1) {
+      return this
+    }
+    // 2.获取参数并在参数中增加Vue的构造函数
+    const args = toArray(arguments, 1)
+    args.unshift(this)
+    // 3.执行install方法
+    if (typeof plugin.install === 'function') {
+      plugin.install.apply(plugin, args)
+    } else if (typeof plugin === 'function') {
+      plugin.apply(null, args)
+    }
+    // 4.记录安装的插件
+    installedPlugins.push(plugin)
+    return this
+}
+```
+:::
+
+::: slot code-mixin
+```js
+Vue.mixin = function (mixin: Object) {
+    this.options = mergeOptions(this.options, mixin)
+    return this
+}
+export function mergeOptions (
+  parent: Object,
+  child: Object,
+  vm?: Component
+): Object {
+  if (!child._base) { // 1.组件先将自己的extends和mixin与父属性合并
+    if (child.extends) {
+      parent = mergeOptions(parent, child.extends, vm)
+    }
+    if (child.mixins) {
+      for (let i = 0, l = child.mixins.length; i < l; i++) {
+        parent = mergeOptions(parent, child.mixins[i], vm)
+      }
+    }
+  }
+  // 2.再用之前合并后的结果，与自身的属性进行合并
+  const options = {}
+  let key
+  for (key in parent) {
+    mergeField(key)
+  }
+  for (key in child) {
+    if (!hasOwn(parent, key)) {
+      mergeField(key)
+    }
+  }
+  function mergeField (key) {
+    const strat = strats[key] || defaultStrat; // 3.采用不同的合并策略
+    options[key] = strat(parent[key], child[key], vm, key)
+  }
+  return options
+}
+```
+:::
+
+
+::: slot code-extend
+```js
+Vue.extend = function (extendOptions: Object): Function {
+    // ...
+    const Sub = function VueComponent (options) {
+      this._init(options)
+    }
+    Sub.prototype = Object.create(Super.prototype)
+    Sub.prototype.constructor = Sub
+    Sub.options = mergeOptions( // 子组件的选项和Vue.options进行合并
+      Super.options,
+      extendOptions
+    )
+    // ...
+    return Sub; 
+  }
+
+```
+:::
+
+
+::: slot code-initAssetRegisters
+```js
+initAssetRegisters(Vue)
+
+ASSET_TYPES.forEach(type => {
+    Vue[type] = function (
+      id: string,
+      definition: Function | Object
+    ): Function | Object | void {
+      if (!definition) {
+        return this.options[type + 's'][id]
+      } else {
+        /* istanbul ignore if */
+        if (process.env.NODE_ENV !== 'production' && type === 'component') {
+          validateComponentName(id)
+        }
+        if (type === 'component' && isPlainObject(definition)) {
+          definition.name = definition.name || id
+          definition = this.options._base.extend(definition)
+        }
+        if (type === 'directive' && typeof definition === 'function') {
+          definition = { bind: definition, update: definition }
+        }
+        this.options[type + 's'][id] = definition; // 将指令、过滤器、组件 绑定在Vue.options上
+
+        // 备注：全局组件、指令过滤器其实就是定义在 Vue.options中，这样创建子组件时都会和Vue.options进行合并，所以子组件可以拿到全局的定义
+
+        return definition
+      }
+    }
+})
+```
+:::
+
+
+::: slot code-Vue
 ```js
 //找到vue构造函数
 function Vue (options) {
@@ -103,9 +497,8 @@ function Vue (options) {
   ) {
     warn('Vue is a constructor and should be called with the `new` keyword')
   }
-  this._init(options) //初始化 进入函数
+  this._init(options) //new Vue初始化 进入函数
 }
-
 
 // 在this._init(options)函数之前执行
 initMixin(Vue)  // 实现init方法
@@ -116,18 +509,18 @@ renderMixin(Vue)  // _render
 ```
 :::
 
-::: slot code6
+::: slot code-initMixin
 ```js
 export function initMixin (Vue: Class<Component>) {
   Vue.prototype._init = function (options?: Object) {
     const vm: Component = this
     // a uid
-    vm._uid = uid++
+    vm._uid = uid++ //每个vue的实例上都有一个唯一的属性_uid
 
     let startTag, endTag
 
     // a flag to avoid this being observed
-    vm._isVue = true
+    vm._isVue = true //表示是Vue的实例
     // merge options
     // 选项合并：通用默认选项和用户选项合并
     if (options && options._isComponent) {  // 组件
@@ -145,15 +538,16 @@ export function initMixin (Vue: Class<Component>) {
 
     // expose real self
     vm._self = vm
+    //进行初始化操作
     initLifecycle(vm)  // 属性初始化：$parent,$root,$children,$refs
     initEvents(vm) // 事件监听
     initRender(vm)  // slots, createElement
     callHook(vm, 'beforeCreate')  // 可以访问上面走过的函数生成的属性
-    initInjections(vm) // resolve injections before data/props
+    initInjections(vm) // 初始化inject
     initState(vm)  // 状态初始化：data.props.methods/computed
-    initProvide(vm) // resolve provide after data/props
+    initProvide(vm) // 初始化provide
     callHook(vm, 'created')
-
+    //如果有el就开始进行挂载
     if (vm.$options.el) {
       vm.$mount(vm.$options.el)  //挂载 进入挂载函数
     }
@@ -162,7 +556,7 @@ export function initMixin (Vue: Class<Component>) {
 ```
 :::
 
-::: slot code7
+::: slot code-initState
 ```js
 export function initState (vm: Component) {
   vm._watchers = []
@@ -182,7 +576,7 @@ export function initState (vm: Component) {
 ```
 :::
 
-::: slot code8
+::: slot code-initData
 ```js
 function initData (vm: Component) {  // 对data进行监控
   let data = vm.$options.data
@@ -221,7 +615,17 @@ function initData (vm: Component) {  // 对data进行监控
 ```
 :::
 
-::: slot code9
+::: slot code-updateComponent
+```js
+let updateComponent = updateComponent = () => {
+      vm._update(vm._render(), hydrating)
+}
+new Watcher(vm, updateComponent, noop, {}, true /* isRenderWatcher */)
+
+```
+:::
+
+::: slot code-observe
 ```js
 export function observe (value: any, asRootData: ?boolean): Observer | void {
   if (!isObject(value) || value instanceof VNode) { // 不是对象或者是vnode
@@ -230,7 +634,7 @@ export function observe (value: any, asRootData: ?boolean): Observer | void {
   let ob: Observer | void
   // 如果value已经是响应式对象
   if (hasOwn(value, '__ob__') && value.__ob__ instanceof Observer) {
-    ob = value.__ob__ // 已经观测的将之前的返回
+    ob = value.__ob__ // 已经观测的将之前观测的实例返回
   } else if (
     shouldObserve &&
     !isServerRendering() &&
@@ -249,7 +653,7 @@ export function observe (value: any, asRootData: ?boolean): Observer | void {
 ```
 :::
 
-::: slot code10
+::: slot code-mount1
 ```js
 //扩展$mount,处理template或el这两个选项并且将其编译为render()
 const mount = Vue.prototype.$mount
@@ -309,7 +713,7 @@ Vue.prototype.$mount = function (
 ```
 :::
 
-::: slot code11
+::: slot code-mount2
 ```js
 // install platform patch function
 // 安装补丁函数：虚拟dom和diff发生的地方
@@ -326,7 +730,7 @@ Vue.prototype.$mount = function (
 ```
 :::
 
-::: slot code12
+::: slot code-mountComponent
 ```js
 export function mountComponent (
   vm: Component,
@@ -387,7 +791,7 @@ export function mountComponent (
 ```
 :::
 
-::: slot code13
+::: slot code-_update
 ```js
 Vue.prototype._update = function (vnode: VNode, hydrating?: boolean) {
     const vm: Component = this
@@ -426,7 +830,7 @@ Vue.prototype._update = function (vnode: VNode, hydrating?: boolean) {
 ```
 :::
 
-::: slot code14
+::: slot code-Watcher
 ```js
 export default class Watcher {
   vm: Component;
@@ -650,7 +1054,7 @@ export default class Watcher {
 ```
 :::
 
-::: slot code15
+::: slot code-Observer
 ```js
 export class Observer {
   value: any;
@@ -690,73 +1094,7 @@ export class Observer {
 ```
 :::
 
-::: slot code16
-```js
-export function defineReactive (
-  obj: Object,
-  key: string,
-  val: any,
-  customSetter?: ?Function,
-  shallow?: boolean
-) {
-    // 每个key对应一个dep
-  const dep = new Dep()
-
-    // 如果这个对象中的某个属性不能被修改，返回（object.freeze）
-  const property = Object.getOwnPropertyDescriptor(obj, key)
-  if (property && property.configurable === false) {
-    return
-  }
-
-    //数据拦截定义，递归
-  let childOb = !shallow && observe(val)
-  Object.defineProperty(obj, key, {
-    enumerable: true,
-    configurable: true,
-    get: function reactiveGetter () {
-        // 获取value
-      const value = getter ? getter.call(obj) : val
-      // 依赖收集
-      if (Dep.target) {  // watcher实例
-      // 创建dep和watcher之间的多对多关系
-        dep.depend()  // 进入
-         // 如果当前value是对象
-        if (childOb) {
-          childOb.dep.depend()
-          if (Array.isArray(value)) {
-            dependArray(value)
-          }
-        }
-      }
-      return value
-    },
-    set: function reactiveSetter (newVal) {
-      const value = getter ? getter.call(obj) : val
-      /* eslint-disable no-self-compare */
-      if (newVal === value || (newVal !== newVal && value !== value)) {
-        return
-      }
-      /* eslint-enable no-self-compare */
-      if (process.env.NODE_ENV !== 'production' && customSetter) {
-        customSetter()
-      }
-      // #7981: for accessor properties without setter
-      if (getter && !setter) return
-      if (setter) {
-        setter.call(obj, newVal)
-      } else {
-        val = newVal
-      }
-      // 如果新value还是对象继续ob
-      childOb = !shallow && observe(newVal)
-      dep.notify()
-    }
-  })
-}
-```
-:::
-
-::: slot code17
+::: slot code-depend
 ```js
 depend () {
     if (Dep.target) {
@@ -766,7 +1104,7 @@ depend () {
 ```
 :::
 
-::: slot code18
+::: slot code-addDep
 ```js
 addDep (dep: Dep) {
     const id = dep.id
@@ -784,7 +1122,7 @@ addDep (dep: Dep) {
 :::
 
 
-::: slot code19
+::: slot code-defineReactive
 ```js
 export function defineReactive (
   obj: Object,
@@ -802,6 +1140,10 @@ export function defineReactive (
     return
   }
 
+  // 获取getter和setter
+  const getter = property && property.get
+  const setter = property && property.set
+
     //数据拦截定义，递归
   let childOb = !shallow && observe(val)
   Object.defineProperty(obj, key, {
@@ -811,13 +1153,13 @@ export function defineReactive (
         // 获取value
       const value = getter ? getter.call(obj) : val
       // 依赖收集
-      if (Dep.target) {  // watcher实例
+      if (Dep.target) {  // watcher实例,如果有watcher 将dep和watcher对应起来
       // 创建dep和watcher之间的多对多关系
         dep.depend()  // 进入
          // 如果当前value是对象
         if (childOb) {
-          childOb.dep.depend()
-          if (Array.isArray(value)) {
+          childOb.dep.depend() // 子ob中的dep和watcher创建关系
+          if (Array.isArray(value)) {  //如果是数组
             dependArray(value)
           }
         }
@@ -843,14 +1185,77 @@ export function defineReactive (
       }
       // 如果新value还是对象继续ob
       childOb = !shallow && observe(newVal)
-      dep.notify() // 进入
+      dep.notify() // 进入 当属性更新时通知dep中的所有watcher进行更新操作
     }
   })
 }
 ```
 :::
 
-::: slot code20
+::: slot code-arrayMethods
+```js
+export const arrayMethods = Object.create(arrayProto)
+const methodsToPatch = [
+  'push',
+  'pop',
+  'shift',
+  'unshift',
+  'splice',
+  'sort',
+  'reverse'
+]
+methodsToPatch.forEach(function (method) {
+  // cache original method
+  const original = arrayProto[method]
+  def(arrayMethods, method, function mutator (...args) {
+    const result = original.apply(this, args)
+    const ob = this.__ob__
+    let inserted
+    switch (method) {
+      case 'push':
+      case 'unshift':
+        inserted = args
+        break
+      case 'splice':
+        inserted = args.slice(2)
+        break
+    }
+    // 对新增的属性再次进行观测
+    if (inserted) ob.observeArray(inserted)
+    return result
+  })
+})
+```
+:::
+
+::: slot code-Dep
+```js
+export default class Dep {
+  constructor () {
+    this.id = uid++
+    this.subs = []
+  }
+  addSub (sub: Watcher) {
+    this.subs.push(sub)
+  }
+
+  depend () {
+    if (Dep.target) { 
+      Dep.target.addDep(this) // 让watcher记住自己
+    }
+  }
+
+  notify () {
+    const subs = this.subs.slice()
+    for (let i = 0, l = subs.length; i < l; i++) {
+      subs[i].update() // 让存储的watcher依次调用更新方法
+    }
+  }
+}
+```
+:::
+
+::: slot code-notify
 ```js
 notify () {
     // stabilize the subscriber list first
@@ -868,7 +1273,7 @@ notify () {
 ```
 :::
 
-::: slot code21
+::: slot code-update
 ```js
 update () {
     /* istanbul ignore else */
@@ -883,7 +1288,7 @@ update () {
 ```
 :::
 
-::: slot code22
+::: slot code-queueWatcher
 ```js
 export function queueWatcher (watcher: Watcher) {
     // 获取id
@@ -922,7 +1327,7 @@ export function queueWatcher (watcher: Watcher) {
 :::
 
 
-::: slot code23
+::: slot code-nextTick
 ```js
 export function nextTick (cb?: Function, ctx?: Object) {
   let _resolve
@@ -953,7 +1358,7 @@ export function nextTick (cb?: Function, ctx?: Object) {
 ```
 :::
 
-::: slot code24
+::: slot code-timerFunc
 ```js
 let timerFunc
 // 首选异步解决方案Promise
@@ -1230,7 +1635,7 @@ return function patch (oldVnode, vnode, hydrating, removeOnly) {
 ```
 :::
 
-::: slot code29
+::: slot code-29
 ```js
 function updateChildren (parentElm, oldCh, newCh, insertedVnodeQueue, removeOnly) {
       // 创建首位4个游标

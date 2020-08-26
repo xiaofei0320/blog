@@ -1,0 +1,1 @@
+(window.webpackJsonp=window.webpackJsonp||[]).push([[35],{355:function(t,e,n){"use strict";n.r(e);var s={},o=n(34),i=Object(o.a)(s,(function(){var t=this.$createElement,e=this._self._c||t;return e("div",[e("Content",{attrs:{"slot-key":"title-index"}}),this._v(" "),e("Content",{attrs:{"slot-key":"code-method1"}})],1)}),[],!1,null,"0cd916b3",null);e.default=i.exports}}]);

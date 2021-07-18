@@ -1,16 +1,26 @@
+::: slot title-standard
+## Promise标准解读
+:::
+
+
 ::: slot title-index
 ### 实现promise
 :::
 
 ::: slot code-method1
 ```js
+// Promise构造函数接收一个executor函数，executor函数执行完同步或异步操作后，调用它的两个参数resolve和reject
+
+const RESOLVED = 'RESOLVED'
+const REJECTED = 'REJECTED'
+const PENDING = 'PENDING'
 class Promise {
     constructor(executor) {
-        this.status = PENDING
-        this.value = undefined
-        this.reason = undefined
-        this.onResolveCallbacks = []
-        this.onRejectedCallbacks = []
+        this.status = PENDING  // promise当前的状态
+        this.value = undefined  // promise的值
+        this.reason = undefined // promise失败原因
+        this.onResolveCallbacks = []  // Promise resolve时的回调函数集，因为在Promise结束之前有可能有多个then回调添加到它上面
+        this.onRejectedCallbacks = []  //Promise reject时的回调函数集，因为在Promise结束之前有可能有多个then回调添加到它上面
         let resolve = (value) => {
             if (this.status === PENDING) {
                 this.value = value
@@ -26,13 +36,13 @@ class Promise {
             }
         }
         try {
-            executor(resolve, reject)
+            executor(resolve, reject)  // 执行executor并传入相应的参数提供给用户
         } catch (e) {
             reject(e)
         }
-        // executor(resolve, reject)
     }
 
+    //Promise/A标准中，明确规定了then要返回一个新的对象，目前的Promise实现中then几乎都是返回一个新的Promise(详情)对象，所以在我们的实现中，也让then返回一个新的Promise对象。
     then(onFullfilled, onRejected) {
         let promise2 = new Promise((resolve, reject) => {
             if (this.status === RESOLVED) {
@@ -40,30 +50,42 @@ class Promise {
                     try {
                         let x = onFullfilled(this.value)
                         resolvePromise(promise2, x, resolve, reject)
-                    }catch {
-
+                    }catch(reason) {
+                        reject(reason)
                     }
-                    
                 }, 0);
             }
             if (this.status === REJECTED) {
                 setTimeout(() => {
-                    let x = onRejected(this.reason)
+                    try {
+                        let x = onRejected(this.reason)
                     resolvePromise(promise2, x, resolve, reject)
+                    }catch(reason) {
+                        reject(reason)
+                    }
                 }, 0)
             }
+            // 如果当前的Promise还处于pending状态，我们并不能确定调用onResolved还是onRejected，
+            // 只能等到Promise的状态确定后，才能确实如何处理。
+            // 所以我们需要把我们的**两种情况**的处理逻辑做为callback放入promise1(此处即this/self)的回调数组里
+            // 这里之所以没有异步执行，是因为这些函数必然会被resolve或reject调用，而resolve或reject函数里的内容已是异步执行，构造函数里的定义
             if (this.status === PENDING) {
                 this.onResolveCallbacks.push(() => {
-                    setTimeout(() => {
+                    try {
                         let x = onFullfilled(this.value)
                         resolvePromise(promise2, x, resolve, reject)
-                    }, 0)
+                    }catch(reason) {
+                        reject(reason)
+                    }
+                        
                 })
                 this.onRejectedCallbacks.push(() => {
-                    setTimeout(() => {
+                    try {
                         let x = onRejected(this.reason)
-                        resolvePromise(promise2, x, resolve, reject)
-                    }, 0)
+                    resolvePromise(promise2, x, resolve, reject)
+                    }catch(reason) {
+                        reject(reason)
+                    }
                 })
             }
         })
@@ -130,10 +152,6 @@ Promise.race = function(promises) {
         }
     })
 }
-
-const RESOLVED = 'RESOLVED'
-const REJECTED = 'REJECTED'
-const PENDING = 'PENDING'
 ```
 :::
 

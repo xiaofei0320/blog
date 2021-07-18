@@ -1,64 +1,108 @@
-::: slot Pow
-## Pow(x, n)
+::: slot generate-parentheses
+## 括号生成
 :::
 
-::: slot three-sum
-## 三数之和
+::: slot phone-number
+## 电话号码的字母组合
 :::
 
-::: slot valid-anagram
-## 有效的字母异位词
+::: slot permutations
+##  全排列
 :::
 
 ::: slot group-anagrams
 ## 字母异位词分组
 :::
 
-::: slot code-Pow1
+::: slot code-generate-parentheses1
 ```js
-var myPow = function(x, n) {
-   if(n===0)return 1 // n=0直接返回1
-   if(n<0){   				//n<0时 x的n次方等于1除以x的-n次方分
-       return 1/myPow(x,-n)
-   }
-   if(n%2){    //n是奇数时 x的n次方 = x*x的n-1次方
-       return x*myPow(x,n-1)
-   }
-   return myPow(x*x,n/2) //n是偶数，使用分治，一分为二，等于x*x的n/2次方 
-}
+var generateParenthesis = function (n) {
+      let res = [];
+      //  cur :当前字符  left：当前字符左括号 right:当前字符右括号
+      const help = (cur, left, right) => {
+        if (cur.length === 2 * n) {
+          res.push(cur);
+          return;
+        }
+        if (left < n) {
+          help(cur + "(", left + 1, right)
+        }
+        if (right < left) {
+          help(cur + ")", left, right + 1);
+        }
+      };
+      help("", 0, 0);
+      return res;
+    };
 ```
 :::
 
-::: slot code-Pow2
+::: slot code-phone-number1
 ```js
-var myPow = function (num, power) {
-  if (power < 0) return 1 / num * myPow(1 / num, -(power + 1))
-  if (power === 0) return 1 
-  if (power === 1) return num
-  // 以上分别为power小于0 等于0 等于1 的情况
-  let res = 1
-  while (power > 1) { // power大于1
-    if (power % 2 === 1) {
-      res = res * num
-      power--
+var letterCombinations = function(digits) {
+  if (digits == null || digits.length === 0) return [];
+  const map = {
+    2: 'abc',
+    3: 'def',
+    4: 'ghi',
+    5: 'jkl',
+    6: 'mno',
+    7: 'pqrs',
+    8: 'tuv',
+    9: 'wxyz',
+  };
+  const res = [];
+  const go = (i, s) => {
+    if (i === digits.length) {
+      res.push(s);
+      return;
     }
-    num = num * num
-    power = power / 2
-  }
-  return res * num
+    for (const c of map[digits[i]]) {
+      go(i + 1, s + c);
+    }
+  };
+  go(0, '');
+  return res;
 };
 ```
 :::
 
-::: slot code-Pow3
+::: slot code-permutations1
 ```js
-var myPow = (num, power) => {
-  if (power < 0) return 1 / (num * myPow(num, -(power + 1)))
-  if (power === 0) return 1
-  if (power === 1) return num
-  return power % 2 === 1 ?
-    num * myPow(num, power - 1) :
-    myPow(num * num, power / 2)
+const permute = (nums) => {
+//   let res = []
+//   dfs([])
+//   function dfs(path) {
+//     if (path.length == nums.length) {
+//       res.push(path.slice())
+//     }
+//     for (const num of nums) {
+//       if (path.includes(num)) continue
+//       path.push(num)
+//       dfs(path)
+//       path.pop()
+//     }
+//   }
+//   return res
+
+  const result = [];    // 1. 设置结果集
+  const recursion = (path, set) => {    // 2. 回溯
+    if (path.length === nums.length) {    // 2.1 设置回溯终止条件
+      result.push(path.concat());      // 2.1.1 推入结果集
+      return;       // 2.1.2 终止递归
+    }
+    for (let i = 0; i < nums.length; i++) {      // 2.2 遍历数组
+      if (!set.has(i)) {       // 2.2.1 必须是不存在 set 中的坐标
+        path.push(nums[i]);         // 2.2.2 本地递归条件（用完记得删除）
+        set.add(i);
+        recursion(path, set);        // 2.2.3 进一步递归
+        path.pop();        // 2.2.4 回溯：撤回 2.2.2 的操作
+        set.delete(i);
+      }
+    }
+  };
+  recursion([], new Set());
+  return result;  // 3. 返回结果
 }
 ```
 :::

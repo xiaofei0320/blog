@@ -10,10 +10,6 @@
 ## 入口文件
 :::
 
-::: slot header10
-## 全局Api
-:::
-
 ::: slot header3
 ## 初始化流程
 :::
@@ -45,6 +41,10 @@
 
 ::: slot header9
 ## 组件化
+:::
+
+::: slot header10
+## 全局Api
 :::
 
 ::: slot code-list
@@ -102,9 +102,9 @@ types //ts声明文件
 ```js
 'web-full-dev': {
     entry: resolve('web/entry-runtime-with-compiler.js'), //web/entry-runtime-with-compiler.js为入口文件， 进入resolve函数查看web路径
-    dest: resolve('dist/vue.js'),
-    format: 'umd',
-    env: 'development',
+    dest: resolve('dist/vue.js'),  // 打包后的文件
+    format: 'umd',  // 使用的打包规则
+    env: 'development',  // 运行环境
     alias: { he: './entity-decoder' },
     banner
   },
@@ -115,7 +115,7 @@ types //ts声明文件
 ```js
 const aliases = require('./alias')  // 进入该文件
 const resolve = p => {
-  const base = p.split('/')[0]
+  const base = p.split('/')[0]  // 将路径中的前半部分取出
   if (aliases[base]) {
     return path.resolve(aliases[base], p.slice(base.length + 1))
   } else {
@@ -127,6 +127,7 @@ const resolve = p => {
 
 ::: slot code4
 ```js
+//  aliases文件，拼接路径
 const path = require('path')
 
 const resolve = p => path.resolve(__dirname, '../', p)
@@ -149,11 +150,38 @@ module.exports = {
 import Vue from './runtime/index' //    1.引入运行时代码
 const mount = Vue.prototype.$mount; //  2.获取runtime中的$mount方法
 Vue.prototype.$mount = function (el,hydrating) { // 3. 重写$mount方法
-  el = el && query(el)
+  el = el && query(el) // 获取el对象
   const options = this.$options
-  if (!options.render) { // 4.没有render方法就进行编译操作
+  if (!options.render) { // 4.没有render方法就进行编译操作，把template、el转化成render函数, 如果有render，直接挂载
     let template = options.template
-    if(template){ // 5.将模板编译成函数
+    if(template){ // 5.将模板编译成render函数
+    if (typeof template === 'string') {
+        if (template.charAt(0) === '#') {  // 如果模板是id选择器
+          template = idToTemplate(template)  //获取对应的DOM对象的innerHTML
+          /* istanbul ignore if */
+          if (process.env.NODE_ENV !== 'production' && !template) {
+            warn(
+              `Template element not found or is empty: ${options.template}`,
+              this
+            )
+          }
+        }
+      } else if (template.nodeType) {
+        template = template.innerHTML
+      } else {
+        if (process.env.NODE_ENV !== 'production') {
+          warn('invalid template option:' + template, this)
+        }
+        return this
+      }
+    } else if (el) {
+      template = getOuterHTML(el)
+    }
+    if (template) {
+      /* istanbul ignore if */
+      if (process.env.NODE_ENV !== 'production' && config.performance && mark) {
+        mark('compile')
+      }
         const { render, staticRenderFns } = compileToFunctions(template, {
             outputSourceRange: process.env.NODE_ENV !== 'production',
             shouldDecodeNewlines,
@@ -162,10 +190,11 @@ Vue.prototype.$mount = function (el,hydrating) { // 3. 重写$mount方法
             comments: options.comments
         }, this)
         options.render = render // 6.将render函数放到options中
+        options.staticRenderFns = staticRenderFns
     }
     // todo...
   }
-  return mount.call(this, el, hydrating) // 7.进行挂载操作
+  return mount.call(this, el, hydrating) // 7.调用mount方法，渲染DOM，进行挂载操作
 }
 export default Vue
 ```
@@ -501,10 +530,10 @@ function Vue (options) {
 }
 
 // 在this._init(options)函数之前执行
-initMixin(Vue)  // 实现init方法
-stateMixin(Vue)  // $set、$del、$watch
-eventsMixin(Vue)  // $on/$once/$off/$emit
-lifecycleMixin(Vue)  //_update
+initMixin(Vue)  // 实现init方法, 初始化vm
+stateMixin(Vue)  // 注册vm的$set、$del、$watch、$props、$data
+eventsMixin(Vue)  // 初始化事件相关方法 $on/$once/$off/$emit
+lifecycleMixin(Vue)  // 初始化生命周期相关混入方法 _update
 renderMixin(Vue)  // _render
 ```
 :::
@@ -561,10 +590,10 @@ export function initMixin (Vue: Class<Component>) {
 export function initState (vm: Component) {
   vm._watchers = []
   const opts = vm.$options
-  if (opts.props) initProps(vm, opts.props)
-  if (opts.methods) initMethods(vm, opts.methods)
+  if (opts.props) initProps(vm, opts.props)  // props初始化
+  if (opts.methods) initMethods(vm, opts.methods) // methods初始化
   if (opts.data) {  // 数据响应式入口
-    initData(vm)  //  进入
+    initData(vm)  // data初始化 进入
   } else {
     observe(vm._data = {}, true /* asRootData */)
   }
@@ -588,7 +617,7 @@ function initData (vm: Component) {  // 对data进行监控
   const props = vm.$options.props
   const methods = vm.$options.methods
   let i = keys.length
-  while (i--) { // 判断属性方法是否重复 
+  while (i--) { // 判断属性方法名是否重复，重复报错 
     const key = keys[i]
     if (process.env.NODE_ENV !== 'production') {
       if (methods && hasOwn(methods, key)) {
@@ -1134,7 +1163,7 @@ export function defineReactive (
     // 每个key对应一个dep
   const dep = new Dep()
 
-    // 如果这个对象中的某个属性不能被修改，返回（object.freeze）
+    // 如果这个对象中的某个属性不能被修改，返回（若对象使用object.freeze则不能被修改）
   const property = Object.getOwnPropertyDescriptor(obj, key)
   if (property && property.configurable === false) {
     return
@@ -1145,7 +1174,7 @@ export function defineReactive (
   const setter = property && property.set
 
     //数据拦截定义，递归
-  let childOb = !shallow && observe(val)
+  let childOb = !shallow && observe(val) 
   Object.defineProperty(obj, key, {
     enumerable: true,
     configurable: true,

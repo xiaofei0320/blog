@@ -278,4 +278,154 @@ export function initExtend(Vue: GlobalAPI) {
 ::: slot title-vuex
 vuex 使用及其理解
 :::
+
+::: slot code-vuex1
+```js
+export const store = new Vuex.Store({
+// 注意 Store 的 S 大写
+// 状态储存
+state: {
+productList: [
+{
+name: 'goods 1',
+price: 100
+}
+]
+}
+})
+```
+:::
+
+::: slot code-vuex2
+```js
+import Vue from 'vue'
+import Vuex from 'vuex';
+Vue.use(Vuex)
+export const store = new Vuex.Store({
+state: {
+productList: [
+{
+name: 'goods 1',
+price: 100
+},
+]
+},
+// 辅助对象 mapGetter
+getters: {
+getSaledPrice: (state) => {
+let saleProduct = state.productList.map((item) =>
+{ return {
+name: '**' + item.name + '**',
+price: item.price / 2
+}
+})
+return saleProduct;
+}
+}
+})
+// 获取 getter 计算后的值
+export default {
+data () {
+return {
+productList :
+this.$store.getters.getSaledPrice }
+}
+}
+```
+:::
+
+::: slot code-vuex3
+```js
+// 辅助对象 mapMutations
+mutations: {
+// payload 为自定义函数名
+reducePrice: (state, payload) => {
+return state.productList.forEach((product) =>
+{ product.price -= payload;
+})
+}
+}
+// 页面使用
+methods: {
+reducePrice(){
+this.$store.commit('reducePrice',
+4) }
+}
+```
+:::
+
+::: slot code-vuex4
+```js
+actions: {
+// 提交的是 mutation，可以包含异步操作
+reducePriceAsync: (context, payload) => {
+setTimeout(()=> {
+context.commit('reducePrice', payload); // reducePrice 为
+上 一步 mutation 中的属性
+},2000)
+}
+}
+// 页面使用
+// 辅助对象 mapActions
+methods: {
+reducePriceAsync(){
+this.$store.dispatch('reducePriceAsync',
+2) },
+}
+```
+:::
+
+::: slot code-vuex5
+```js
+const moduleA = {
+state: {...},
+mutations: {...},
+actions: {...},
+getters: {...}
+}
+const moduleB = {
+state: {...},
+mutations: {...},
+actions: {...},
+getters: {...}
+}
+const store = new
+Vuex.Store({ a: moduleA,
+b: moduleB
+})
+store.state.a
+store.state.b
+```
+:::
+
+::: slot code-vuex6
+```js
+let defaultCity = "上海"
+try {
+// 用户关闭了本地存储功能，此时在外层加个 try...catch
+if (!defaultCity){
+// f 复制一份
+defaultCity =
+JSON.parse(window.localStorage.getItem('defaultCity')) }
+}catch(e){
+console.log(e)
+}
+export default new Vuex.Store({
+state: {
+city: defaultCity
+},
+mutations: {
+changeCity(state, city) {
+state.city = city
+try {
+window.localStorage.setItem('defaultCity',
+JSON.stringify(state.city));
+// 数据改变的时候把数据拷贝一份保存到 localStorage 里面
+} catch (e) {}
+}
+}
+})
+```
+:::
+
 <vue-about/>

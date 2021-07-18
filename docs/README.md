@@ -4,7 +4,7 @@ heroImage: /img/logo.jpg
 heroText: 呱唧呱~这儿是小匪肥肥游乐场
 tagline: Be A Hero
 actionText: 场区入口
-actionLink: /guide/vue/communication
+actionLink: /guide/es6/deep
 features:
 - title: 简洁至上
   details: 以 Markdown 为中心的项目结构，以最少的配置帮助你专注于写作。

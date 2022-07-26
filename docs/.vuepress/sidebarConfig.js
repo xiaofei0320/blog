@@ -69,55 +69,13 @@ module.exports = [
     title: '网络协议',
     collapsable: true,
     path: '/guide/network/network',
-    children: [
-      // {
-      //   title: 'Webpack深入理解',
-      //   path: '/guide/webpack/webpack',
-      //   collapsable: true,
-      // },
-      // {
-      //   title: 'Rollup与Parcel',
-      //   path: '/guide/webpack/Rollup',
-      //   collapsable: true,
-      // },
-      // {
-      //   title: 'Package配置',
-      //   path: '/guide/webpack/package',
-      //   collapsable: true,
-      // },
-      // {
-      //   title: '前端工程化',
-      //   path: '/guide/webpack/engineered',
-      //   collapsable: true,
-      // },
-    ]
+    children: []
   },
   {
     title: '浏览器工作原理',
     collapsable: true,
     path: '/guide/browser/browser',
-    children: [
-      // {
-      //   title: 'Webpack深入理解',
-      //   path: '/guide/webpack/webpack',
-      //   collapsable: true,
-      // },
-      // {
-      //   title: 'Rollup与Parcel',
-      //   path: '/guide/webpack/Rollup',
-      //   collapsable: true,
-      // },
-      // {
-      //   title: 'Package配置',
-      //   path: '/guide/webpack/package',
-      //   collapsable: true,
-      // },
-      // {
-      //   title: '前端工程化',
-      //   path: '/guide/webpack/engineered',
-      //   collapsable: true,
-      // },
-    ]
+    children: []
   },
   {
     title: '前端性能优化',

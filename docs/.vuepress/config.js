@@ -6,7 +6,7 @@ module.exports = {
     description: 'VuePress',
     head: [
         ['meta', { name: 'viewport', content: 'width=device-width,initial-scale=1,user-scalable=no' }],
-        ['link', { rel: 'icon', href: '/img/logo.jpg' }],
+        ['link', { rel: 'icon', href: '/img/logo1.jpg' }],
         //     ['script', { src: 'https://cdn.jsdelivr.net/npm/react/umd/react.production.min.js' }],
         // ['script', { src: 'https://cdn.jsdelivr.net/npm/react-dom/umd/react-dom.production.min.js' }],
         // ['script', { src: 'https://cdn.jsdelivr.net/npm/vue/dist/vue.min.js' }],
@@ -17,7 +17,7 @@ module.exports = {
     ],
     base: '/blog/',
     themeConfig: {
-        logo: '/img/logo.jpg',
+        logo: '/img/logo1.jpg',
         search: true,
         nav: navConfig,
         sidebar: sidebarConfig
